@@ -16,6 +16,10 @@ public class SprintService {
         this.sprintRepo = sprintRepo;
     }
 
+    public List<Sprint> listar() {
+        return sprintRepo.findAll();
+    }
+
     public Sprint crear(SprintDTO dto) {
         Sprint sprint = new Sprint();
         sprint.setNombre(dto.getNombre());

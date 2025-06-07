@@ -20,6 +20,13 @@ public class SprintController {
         this.sprintService = sprintService;
     }
 
+    @GetMapping
+    public List<SprintDTO> listar() {
+        return sprintService.listar().stream()
+                .map(Mapper::toSprintDTO)
+                .toList();
+    }
+
     @PostMapping
     public SprintDTO crear(@Valid @RequestBody SprintDTO dto) {
         return Mapper.toSprintDTO(sprintService.crear(dto));
