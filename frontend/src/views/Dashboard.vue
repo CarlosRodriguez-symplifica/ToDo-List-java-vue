@@ -2,6 +2,10 @@
   import { ref, onMounted, watch, computed } from 'vue'
   import draggable from 'vuedraggable'
 
+  const currentGrabbingId = ref(null)
+  const hoveredId = ref(null)
+  const isDragging = ref(false)
+
   const sprints = ref([])
   const selectedSprint = ref([])
   const tareasPorColumna = ref({
@@ -29,10 +33,10 @@
 
   const getColumnBorderClass = (titulo) => {
     const clases = {
-      'Por Hacer': 'border-por-hacer mb-2 mt-4',
-      'En Progreso': 'border-en-progreso mb-2 mt-4',
-      'Testiando': 'border-testiando mb-2 mt-4',
-      'Hechas': 'border-hechas mb-2 mt-4'
+      'Por Hacer': 'border-por-hacer',
+      'En Progreso': 'border-en-progreso',
+      'Testiando': 'border-testiando',
+      'Hechas': 'border-hechas'
     }
     return clases[titulo] || '#FFFFFF'
   }
@@ -113,12 +117,38 @@
     tareasPorColumna.value.TESTING.length
   )
 
+  const onMouseDown = (id) => {
+    currentGrabbingId.value = id
+  }
+
+  const onMouseUp = () => {
+    currentGrabbingId.value = null
+  }
+
+  const onMouseOver = (id) => {
+    hoveredId.value = id
+  }
+
+  const onDragStart = () => {
+    isDragging.value = true
+  }
+
+  const onDragEnd = () => {
+    isDragging.value = false
+  }
+
+  const getCursorClass = (id) => {
+    if (isDragging.value) return 'cursor-grabbing'
+    if (currentGrabbingId.value === id) return 'cursor-grabbing'
+    if (hoveredId.value === id) return 'cursor-grab'
+    return ''
+  }
   onMounted(fetchSprints)
 </script>
 
 <template>
   <v-layout>
-    <v-app-bar title="Sprint Board" color="secondary" dark></v-app-bar>
+    <v-app-bar title="To-Do Board" color="secondary" dark></v-app-bar>
 
     <v-navigation-drawer width="250" permanent>
       <v-list nav>
@@ -191,11 +221,17 @@
                     item-key="id"
                     class="d-flex flex-column gap-2"
                     @change="(e) => onDragChange(e, col.estado)"
+                    @start="onDragStart"
+                    @end="onDragEnd"
                   >
                     <template #item="{ element: tarea }">
                       <v-card
-                        :class="getColumnBorderClass(col.titulo)"
+                        :class="['mb-2 mt-4 tarea', getColumnBorderClass(col.titulo), getCursorClass(tarea.id)]"
                         elevation="6"
+                        @mousedown="onMouseDown(tarea.id)"
+                        @mouseup="onMouseUp"
+                        @mouseleave="onMouseUp"
+                        @mouseover="onMouseOver(tarea.id)"
                       >
                         <v-card-title class="text-subtitle-1">{{ tarea.titulo }}</v-card-title>
                         <v-card-text>{{ tarea.descripcion }}</v-card-text>
@@ -231,5 +267,20 @@
 
   .border-hechas {
     border-left: 5px solid #C5E1A5;
+  }
+
+  .tarea {
+    transition: transform 1.5s ease;
+  }
+
+  .tarea:active {
+    transform: scale(1.05);
+  }
+
+  .cursor-grab {
+    cursor: grab !important;;
+  }
+  .cursor-grabbing {
+    cursor: grabbing !important;
   }
 </style>
