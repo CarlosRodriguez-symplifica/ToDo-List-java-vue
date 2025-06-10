@@ -1,5 +1,6 @@
 <script setup>
-  import { ref, onMounted, watch } from 'vue'
+  import { ref, onMounted, watch, computed } from 'vue'
+  import draggable from 'vuedraggable'
 
   const sprints = ref([])
   const selectedSprint = ref([])
@@ -33,7 +34,6 @@
       'Testiando': 'border-testiando mb-2 mt-4',
       'Hechas': 'border-hechas mb-2 mt-4'
     }
-    console.log(clases[titulo])
     return clases[titulo] || '#FFFFFF'
   }
 
@@ -81,6 +81,37 @@
       console.error(error)
     }
   }
+
+  const onDragChange = async (event, nuevoEstado) => {
+    const { added } = event
+
+    if (added) {
+      const tarea = added.element
+
+      try {
+        const response = await fetch(`api/v1/tareas/${tarea.id}/estado`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: nuevoEstado })
+        })
+
+        if (!response.ok) {
+          throw new Error('Error al actualizar el estado de la tarea.')
+        }
+
+        tarea.estado = nuevoEstado
+        fetchProgreso(tarea.id)
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+
+  const tareasAbiertas = computed(() =>
+    tareasPorColumna.value.TODO.length +
+    tareasPorColumna.value.DOING.length +
+    tareasPorColumna.value.TESTING.length
+  )
 
   onMounted(fetchSprints)
 </script>
@@ -131,13 +162,7 @@
 
               <v-col class="d-flex align-center" cols="auto">
                 <v-icon start>mdi-format-list-bulleted</v-icon>
-                <span class="text-h6 font-weight-bold mr-1">
-                  {{
-                    tareasPorColumna.TODO.length +
-                    tareasPorColumna.DOING.length +
-                    tareasPorColumna.TESTING.length
-                  }}
-                </span>
+                <span class="text-h6 font-weight-bold mr-1">{{ tareasAbiertas }}</span>
                 <span class="text-caption">tareas abiertas</span>
               </v-col>
 
@@ -150,20 +175,34 @@
           </v-card>
 
           <v-row dense class="mt-4">
-            <v-col cols="12" md="3" v-for="col in columnas" :key="col.estado">
+            <v-col
+              cols="12"
+              md="3"
+              v-for="(col, index) in columnas"
+              :key="col.estado"
+              :data-estado-index="index"
+            >
               <v-card class="mb-2" elevation="16">
                 <v-card-title :class="getColumnClass(col.titulo)">{{ col.titulo }}</v-card-title>
                 <v-card-text class="mt-4">
-                  <v-card
-                    v-for="tarea in tareasPorColumna[col.estado]"
-                    :key="tarea.id"
-                    :class="getColumnBorderClass(col.titulo)"
-                    elevation="6"
+                  <draggable
+                    :list="tareasPorColumna[col.estado]"
+                    group="tareas"
+                    item-key="id"
+                    class="d-flex flex-column gap-2"
+                    @change="(e) => onDragChange(e, col.estado)"
                   >
-                    <v-card-title class="text-subtitle-1">{{ tarea.titulo }}</v-card-title>
-                    <v-card-text>{{ tarea.descripcion }}</v-card-text>
-                    <v-card-subtitle>Puntos: {{ tarea.puntos }}</v-card-subtitle>
-                  </v-card>
+                    <template #item="{ element: tarea }">
+                      <v-card
+                        :class="getColumnBorderClass(col.titulo)"
+                        elevation="6"
+                      >
+                        <v-card-title class="text-subtitle-1">{{ tarea.titulo }}</v-card-title>
+                        <v-card-text>{{ tarea.descripcion }}</v-card-text>
+                        <v-card-subtitle>Puntos: {{ tarea.puntos }}</v-card-subtitle>
+                      </v-card>
+                    </template>
+                  </draggable>
                 </v-card-text>
               </v-card>
             </v-col>
