@@ -4,6 +4,7 @@
   import SprintList from '@/components/SprintList.vue'
   import SprintHeader from '@/components/SprintHeader.vue'
   import TareaCard from '@/components/TareaCard.vue'
+  import EditarTareaDialog from '@/components/EditarTareaDialog.vue'
 
   import draggable from 'vuedraggable'
   import { useDraggableState } from '@/composables/useDraggableState'
@@ -15,6 +16,8 @@
   const tareasPorColumna = ref({
     TODO: [], DOING: [], TESTING: [], DONE: []
   })
+  const tareaSeleccionada = ref(null)
+  const mostrarEditor = ref(false)
 
   const columnas = [
     { titulo: 'Por Hacer', estado: 'TODO' },
@@ -100,7 +103,7 @@
         }
 
         tarea.estado = nuevoEstado
-        fetchProgreso(tarea.id)
+        await fetchProgreso(tarea.sprintId)
       } catch (error) {
         console.error(error)
       }
@@ -112,6 +115,46 @@
     tareasPorColumna.value.DOING.length +
     tareasPorColumna.value.TESTING.length
   )
+
+  const abrirDialog = (tarea) => {
+    tareaSeleccionada.value = tarea
+    mostrarEditor.value = true
+  }
+
+  const cargarTareas = async (tareaActualizada) => {
+    const sprintActualId = selectedSprint.value?.id
+
+    if (tareaActualizada.sprintId !== sprintActualId) {
+      try {
+        await fetch(`api/v1/tareas/${tareaActualizada.id}/estado`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: 'TODO' })
+        })
+      } catch (error) {
+        console.log('Error al cambiar el estado de la tarea a TODO:', error)
+      }
+
+      await selectSprint(sprintActualId)
+      await fetchProgreso(sprintActualId)
+      return
+    }
+
+    const todasColumnas = Object.keys(tareasPorColumna.value)
+
+    for (const estado of todasColumnas) {
+      tareasPorColumna.value[estado] = tareasPorColumna.value[estado].filter(
+        t => t.id !== tareaActualizada.id
+      )
+    }
+
+    tareasPorColumna.value[tareaActualizada.estado] = [
+      ...tareasPorColumna.value[tareaActualizada.estado],
+      tareaActualizada
+    ]
+
+    await fetchProgreso(sprintActualId)
+  }
 
   onMounted(fetchSprints)
 </script>
@@ -157,12 +200,20 @@
                     @end="onDragEnd"
                   >
                     <template #item="{ element: tarea }">
-                      <TareaCard :tarea="tarea" :columnTitle="col.titulo" />
+                      <TareaCard :tarea="tarea" :columnTitle="col.titulo" @editar="abrirDialog" />
                     </template>
                   </draggable>
                 </v-card-text>
               </v-card>
             </v-col>
+
+            <EditarTareaDialog
+              v-model="mostrarEditor"
+              :tarea="tareaSeleccionada"
+              :sprints="sprints"
+              @update:model-value="mostrarEditor = $event"
+              @actualizada="cargarTareas"
+            />
           </v-row>
         </div>
         <div v-else>

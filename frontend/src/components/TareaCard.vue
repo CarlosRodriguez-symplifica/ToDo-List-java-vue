@@ -7,6 +7,8 @@
     columnTitle: String
   })
 
+  defineEmits(['editar'])
+
   const { isDragging, currentGrabbingId, hoveredId } = useDraggableState()
 
   const borderClass = computed(() => {
@@ -67,11 +69,15 @@
   >
     <v-card-title class="text-subtitle-1 font-weight-medium">{{ tarea.titulo }}</v-card-title>
     <v-card-text class="text-caption">{{ tarea.descripcion }}</v-card-text>
-    <v-card-actions>
+    <v-card-actions class="d-flex justify-space-between">
       <v-chip :color="chipColor" label size="small">
-        <v-icon icon="mdi-label" start></v-icon>
+        <v-icon icon="mdi-label-outline" start />
         {{ tarea.puntos }} pts
       </v-chip>
+
+      <v-btn icon color="orange-accent-4" size="small" @click.stop="$emit('editar', tarea)">
+        <v-icon icon="mdi-pencil" />
+      </v-btn>
     </v-card-actions>
   </v-card>
 </template>
