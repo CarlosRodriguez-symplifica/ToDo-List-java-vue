@@ -1,19 +1,17 @@
 <script setup>
-  import { ref, onMounted, watch, computed } from 'vue'
+  import { ref, onMounted, computed } from 'vue'
   import draggable from 'vuedraggable'
+  import TareaCard from '@/components/TareaCard.vue'
+  import { useDraggableState } from '@/composables/useDraggableState'
 
-  const currentGrabbingId = ref(null)
-  const hoveredId = ref(null)
-  const isDragging = ref(false)
+  const { isDragging } = useDraggableState()
 
   const sprints = ref([])
   const selectedSprint = ref([])
   const tareasPorColumna = ref({
-    TODO: [],
-    DOING: [],
-    TESTING: [],
-    DONE: []
+    TODO: [], DOING: [], TESTING: [], DONE: []
   })
+
   const columnas = [
     { titulo: 'Por Hacer', estado: 'TODO' },
     { titulo: 'En Progreso', estado: 'DOING' },
@@ -31,15 +29,7 @@
     return clases[titulo] || '#FFFFFF'
   }
 
-  const getColumnBorderClass = (titulo) => {
-    const clases = {
-      'Por Hacer': 'border-por-hacer',
-      'En Progreso': 'border-en-progreso',
-      'Testiando': 'border-testiando',
-      'Hechas': 'border-hechas'
-    }
-    return clases[titulo] || '#FFFFFF'
-  }
+  const progreso = ref({ hechos: 0, faltan: 0 })
 
   const fetchSprints = async () => {
     try {
@@ -74,8 +64,6 @@
     }
   }
 
-  const progreso = ref({ hechos: 0, faltan: 0 })
-
   const fetchProgreso = async (sprintId) => {
     try {
       const response = await fetch(`api/v1/sprints/${sprintId}/progreso`)
@@ -85,6 +73,9 @@
       console.error(error)
     }
   }
+
+  const onDragStart = () => { isDragging.value = true }
+  const onDragEnd = () => { isDragging.value = false }
 
   const onDragChange = async (event, nuevoEstado) => {
     const { added } = event
@@ -117,32 +108,6 @@
     tareasPorColumna.value.TESTING.length
   )
 
-  const onMouseDown = (id) => {
-    currentGrabbingId.value = id
-  }
-
-  const onMouseUp = () => {
-    currentGrabbingId.value = null
-  }
-
-  const onMouseOver = (id) => {
-    hoveredId.value = id
-  }
-
-  const onDragStart = () => {
-    isDragging.value = true
-  }
-
-  const onDragEnd = () => {
-    isDragging.value = false
-  }
-
-  const getCursorClass = (id) => {
-    if (isDragging.value) return 'cursor-grabbing'
-    if (currentGrabbingId.value === id) return 'cursor-grabbing'
-    if (hoveredId.value === id) return 'cursor-grab'
-    return ''
-  }
   onMounted(fetchSprints)
 </script>
 
@@ -152,23 +117,34 @@
 
     <v-navigation-drawer width="250" permanent>
       <v-list nav>
+        <v-list-subheader color="secondary">Lista de sprints</v-list-subheader>
+
         <v-list-item
           v-for="sprint in sprints"
           :key="sprint.id"
+          rounded="shaped"
+          color="secondary"
           :title="sprint.nombre"
           :active="selectedSprint?.id === sprint.id"
           @click="selectSprint(sprint.id)"
-        />
+        >
+          <template v-slot:prepend>
+            <v-icon icon="mdi-list-box-outline" start></v-icon>
+          </template>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
     <v-main>
       <v-container fluid>
         <div v-if="selectedSprint">
-          <h2 class="text-h5 mb-4">{{ selectedSprint.nombre }}</h2>
 
           <v-card elevation="16" color="blue-grey lighten-4" dark flat rounded="lg">
             <v-row class="pa-4" align="center" justify="start">
+
+              <v-col class="d-flex align-center" cols="auto">
+                <h2 class="text-h5">{{ selectedSprint.nombre }}</h2>
+              </v-col>
 
               <v-col class="d-flex align-center" cols="auto">
                 <v-icon start>mdi-badge-account-horizontal-outline</v-icon>
@@ -210,7 +186,6 @@
               md="3"
               v-for="(col, index) in columnas"
               :key="col.estado"
-              :data-estado-index="index"
             >
               <v-card class="mb-2" elevation="16">
                 <v-card-title :class="getColumnClass(col.titulo)">{{ col.titulo }}</v-card-title>
@@ -225,18 +200,7 @@
                     @end="onDragEnd"
                   >
                     <template #item="{ element: tarea }">
-                      <v-card
-                        :class="['mb-2 mt-4 tarea', getColumnBorderClass(col.titulo), getCursorClass(tarea.id)]"
-                        elevation="6"
-                        @mousedown="onMouseDown(tarea.id)"
-                        @mouseup="onMouseUp"
-                        @mouseleave="onMouseUp"
-                        @mouseover="onMouseOver(tarea.id)"
-                      >
-                        <v-card-title class="text-subtitle-1">{{ tarea.titulo }}</v-card-title>
-                        <v-card-text>{{ tarea.descripcion }}</v-card-text>
-                        <v-card-subtitle>Puntos: {{ tarea.puntos }}</v-card-subtitle>
-                      </v-card>
+                      <TareaCard :tarea="tarea" :columnTitle="col.titulo" />
                     </template>
                   </draggable>
                 </v-card-text>
@@ -253,34 +217,4 @@
 </template>
 
 <style>
-  .border-por-hacer {
-    border-left: 5px solid #BBDEFB;
-  }
-
-  .border-en-progreso {
-    border-left: 5px solid #FFCC80;
-  }
-
-  .border-testiando {
-    border-left: 5px solid #E1BEE7;
-  }
-
-  .border-hechas {
-    border-left: 5px solid #C5E1A5;
-  }
-
-  .tarea {
-    transition: transform 1.5s ease;
-  }
-
-  .tarea:active {
-    transform: scale(1.05);
-  }
-
-  .cursor-grab {
-    cursor: grab !important;;
-  }
-  .cursor-grabbing {
-    cursor: grabbing !important;
-  }
 </style>
