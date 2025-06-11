@@ -1,7 +1,11 @@
 <script setup>
   import { ref, onMounted, computed } from 'vue'
-  import draggable from 'vuedraggable'
+
+  import SprintList from '@/components/SprintList.vue'
+  import SprintHeader from '@/components/SprintHeader.vue'
   import TareaCard from '@/components/TareaCard.vue'
+
+  import draggable from 'vuedraggable'
   import { useDraggableState } from '@/composables/useDraggableState'
 
   const { isDragging } = useDraggableState()
@@ -35,7 +39,8 @@
     try {
       const response = await fetch('api/v1/sprints')
       if (!response.ok) throw new Error('Error al cargar los sprints')
-      sprints.value = await response.json()
+      const data = await response.json()
+      sprints.value = data.reverse()
       if (sprints.value.length) {
         await selectSprint(sprints.value[0].id)
       }
@@ -115,70 +120,22 @@
   <v-layout>
     <v-app-bar title="To-Do Board" color="secondary" dark></v-app-bar>
 
-    <v-navigation-drawer width="250" permanent>
-      <v-list nav>
-        <v-list-subheader color="secondary">Lista de sprints</v-list-subheader>
-
-        <v-list-item
-          v-for="sprint in sprints"
-          :key="sprint.id"
-          rounded="shaped"
-          color="secondary"
-          :title="sprint.nombre"
-          :active="selectedSprint?.id === sprint.id"
-          @click="selectSprint(sprint.id)"
-        >
-          <template v-slot:prepend>
-            <v-icon icon="mdi-list-box-outline" start></v-icon>
-          </template>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>
+    <SprintList
+      :sprints="sprints"
+      :selectedSprintId="selectedSprint?.id"
+      @select="selectSprint"
+    />
 
     <v-main>
       <v-container fluid>
         <div v-if="selectedSprint">
 
-          <v-card elevation="16" color="blue-grey lighten-4" dark flat rounded="lg">
-            <v-row class="pa-4" align="center" justify="start">
-
-              <v-col class="d-flex align-center" cols="auto">
-                <h2 class="text-h5">{{ selectedSprint.nombre }}</h2>
-              </v-col>
-
-              <v-col class="d-flex align-center" cols="auto">
-                <v-icon start>mdi-badge-account-horizontal-outline</v-icon>
-                <span class="text-h6 font-weight-bold mr-1">{{ selectedSprint.puntosObjetivo }}</span>
-                <span class="text-caption">puntos totales</span>
-              </v-col>
-
-              <v-col class="d-flex align-center" cols="auto">
-                <v-icon start>mdi-check-circle-outline</v-icon>
-                <span class="text-h6 font-weight-bold mr-1">{{ progreso.hechos }}</span>
-                <span class="text-caption">completados</span>
-              </v-col>
-
-              <v-col class="d-flex align-center" cols="auto">
-                <v-icon start>mdi-clock-outline</v-icon>
-                <span class="text-h6 font-weight-bold mr-1">{{ progreso.faltan }}</span>
-                <span class="text-caption">pendientes</span>
-              </v-col>
-
-              <v-divider vertical class="mx-4" />
-
-              <v-col class="d-flex align-center" cols="auto">
-                <v-icon start>mdi-format-list-bulleted</v-icon>
-                <span class="text-h6 font-weight-bold mr-1">{{ tareasAbiertas }}</span>
-                <span class="text-caption">tareas abiertas</span>
-              </v-col>
-
-              <v-col class="d-flex align-center" cols="auto">
-                <v-icon start>mdi-check-bold</v-icon>
-                <span class="text-h6 font-weight-bold mr-1">{{ tareasPorColumna.DONE.length }}</span>
-                <span class="text-caption">cerradas</span>
-              </v-col>
-            </v-row>
-          </v-card>
+          <SprintHeader
+            :sprint="selectedSprint"
+            :progreso="progreso"
+            :tareas-abiertas="tareasAbiertas"
+            :tareas-cerradas="tareasPorColumna.DONE.length"
+          />
 
           <v-row dense class="mt-4">
             <v-col
