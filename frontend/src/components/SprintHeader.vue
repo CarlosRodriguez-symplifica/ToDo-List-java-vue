@@ -1,4 +1,6 @@
 <script setup>
+  const emit = defineEmits(['crear-tarea'])
+
   defineProps({
     sprint: {
       type: Object,
@@ -20,7 +22,7 @@
 </script>
 
 <template>
-  <v-card elevation="16" color="blue-grey lighten-4" dark flat rounded="lg">
+  <v-card elevation="16" color="secondary" dark flat rounded="lg">
     <v-row class="pa-4" align="center" justify="start">
 
       <v-col class="d-flex align-center" cols="auto">
@@ -57,6 +59,14 @@
         <v-icon start>mdi-check-bold</v-icon>
         <span class="text-h6 font-weight-bold mr-1">{{ tareasCerradas }}</span>
         <span class="text-caption">cerradas</span>
+      </v-col>
+
+      <v-divider vertical class="mx-4" />
+
+      <v-spacer />
+
+      <v-col class="d-flex align-center justify-end" cols="auto">
+        <v-btn density="compact" icon="mdi-plus" elevation="4" @click="emit('crear-tarea')"></v-btn>
       </v-col>
     </v-row>
   </v-card>

@@ -18,6 +18,7 @@
   })
   const tareaSeleccionada = ref(null)
   const mostrarEditor = ref(false)
+  const modo = ref('crear')
 
   const columnas = [
     { titulo: 'Por Hacer', estado: 'TODO' },
@@ -116,7 +117,14 @@
     tareasPorColumna.value.TESTING.length
   )
 
-  const abrirDialog = (tarea) => {
+  const abrirDialogCrear = (sprintId) => {
+    modo.value = 'crear'
+    tareaSeleccionada.value = null
+    mostrarEditor.value = true
+  }
+
+  const abrirDialogEditar = (tarea) => {
+    modo.value = 'editar'
     tareaSeleccionada.value = tarea
     mostrarEditor.value = true
   }
@@ -178,6 +186,7 @@
             :progreso="progreso"
             :tareas-abiertas="tareasAbiertas"
             :tareas-cerradas="tareasPorColumna.DONE.length"
+            @crear-tarea="abrirDialogCrear(selectedSprint.id)"
           />
 
           <v-row dense class="mt-4">
@@ -200,7 +209,7 @@
                     @end="onDragEnd"
                   >
                     <template #item="{ element: tarea }">
-                      <TareaCard :tarea="tarea" :columnTitle="col.titulo" @editar="abrirDialog" />
+                      <TareaCard :tarea="tarea" :columnTitle="col.titulo" @editar="abrirDialogEditar" />
                     </template>
                   </draggable>
                 </v-card-text>
@@ -211,7 +220,8 @@
               v-model="mostrarEditor"
               :tarea="tareaSeleccionada"
               :sprints="sprints"
-              @update:model-value="mostrarEditor = $event"
+              :modo="modo"
+              :sprint="selectedSprint.id"
               @actualizada="cargarTareas"
             />
           </v-row>
